@@ -125,6 +125,9 @@ module Jekyll
 
 
     def crosspost_payload(crossposted, post, content, title, url, published_at)
+      # Prepend the featured image
+      content.prepend("<img alt=\"#{title}\" src=\"#{post.data['featured_image']}\">")
+
       # Update any absolute URLs
       # But don’t clobber protocol-less (i.e. "//") URLs
       content = content.gsub /href=(["'])\/(?!\/)/, "href=\\1#{@site.config['url']}/"
@@ -136,6 +139,7 @@ module Jekyll
 
       # Prepend the title and add a link back to originating site
       content.prepend("<h1>#{title}</h1>")
+
       # Append a canonical link and text
       # TODO Accept a position option, e.g., top, bottom.
       #
@@ -153,16 +157,16 @@ module Jekyll
       url = url.sub(/^#{@site.config['url']}?/,'')
 
       # coerce tage to an array
-      tags = post.data['tags']
+      tags = post.data['categories']
       if tags.kind_of? String
         tags = tags.split(',')
       end
-
+      
       # Only cross-post if content has not already been cross-posted
       if url and ! crossposted.has_key? url
         payload = {
           'title'         => title,
-          'contentFormat' => "html",
+          'contentFormat' => "markdown",
           'content'       => content,
           'tags'          => tags,
           'publishStatus' => @settings['status'] || "public",
@@ -183,7 +187,8 @@ module Jekyll
     def crosspost_to_medium(payload)
       user_id = ENV['MEDIUM_USER_ID'] or false
       token = ENV['MEDIUM_INTEGRATION_TOKEN'] or false
-      medium_api = URI.parse("https://api.medium.com/v1/users/#{user_id}/posts")
+
+      medium_api = URI.parse("https://api.medium.com/v1/publications/#{user_id}/posts")
 
       # Build the connection
       https = Net::HTTP.new(medium_api.host, medium_api.port)
